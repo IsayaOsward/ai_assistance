@@ -1,10 +1,12 @@
 import 'dart:convert';
-import 'dart:developer' as d;
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
-Future<String> callOpenRouterAPI(String message) async {
+Future<String> callOpenRouterAPI({
+  required String message,
+  required String currentModel,
+}) async {
   final String apiKey = dotenv.env['OPENROUTER_API_KEY']!;
   const String apiUrl = "https://openrouter.ai/api/v1/chat/completions";
   final headers = {
@@ -15,7 +17,7 @@ Future<String> callOpenRouterAPI(String message) async {
   };
 
   final body = jsonEncode({
-    'model': 'qwen/qwq-32b:free',
+    'model': currentModel,
     'messages': [
       {"role": "system", "content": "You are a helpful AI Assistant"},
       {"role": "user", "content": message},
@@ -26,10 +28,8 @@ Future<String> callOpenRouterAPI(String message) async {
 
   final url = Uri.parse(apiUrl);
   final response = await http.post(url, headers: headers, body: body);
-  d.log("========================================${response.body}");
   if (response.statusCode == 200) {
     final data = jsonDecode(response.body);
-    d.log("========================================$data");
     return data['choices'][0]['message']['content'];
   } else {
     throw Exception("Failed to load response: ${response.statusCode}");

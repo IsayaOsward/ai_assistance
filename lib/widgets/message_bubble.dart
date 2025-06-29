@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 
-import '../message.dart';
+import '../model/message.dart';
 import 'avatar.dart';
 
-Widget buildMessageBubble({required BuildContext context,required Message message}) {
+Widget buildMessageBubble({
+  required BuildContext context,
+  required Message message,
+}) {
   return Padding(
     padding: EdgeInsets.only(bottom: 16),
     child: Row(

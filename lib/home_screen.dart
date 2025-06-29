@@ -1,7 +1,10 @@
-import 'package:ai_chatbot/message.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import 'model/message.dart';
+import 'providers/ai_model_provider.dart';
 import 'service/api_call.dart';
+import 'util/ai_model_bottom_sheet.dart';
 import 'util/id_generator.dart';
 import 'widgets/avatar.dart';
 import 'widgets/loading_dot.dart';
@@ -42,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
-  Future<void> _sendMessage() async {
+  Future<void> _sendMessage({required String currentModel}) async {
     if (_messageController.text.trim().isEmpty) return;
 
     final userMessage = _messageController.text.trim();
@@ -62,7 +65,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _scrollToBottom();
 
     try {
-      final response = await callOpenRouterAPI(userMessage);
+      final response = await callOpenRouterAPI(
+        message: userMessage,
+        currentModel: currentModel,
+      );
       setState(() {
         _messages.add(
           Message(
@@ -118,132 +124,155 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xff0a0a0a), Color(0xff1a1a2e), Color(0xff16213E)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header Section
-              Container(
-                padding: EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xff667eea), Color(0xff764ba2)],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0xff667eea).withOpacity(0.1),
-                            blurRadius: 12,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.smart_toy_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                    SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "AI Assistant",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            "Ask me anything",
-                            style: TextStyle(
-                              color: Colors.white60,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(Icons.more_vert, color: Colors.white70),
-                    ),
-                  ],
-                ),
-              ),
+      body: Consumer<AiModelProvider>(
+        builder: (context, aiModelProvider, child) {
+          final modelName =
+              aiModelProvider.aiModels[aiModelProvider
+                      .preferredModelIndex]['name']
+                  as String;
+          final displayModel = modelName.split(':').first;
 
-              // Messages area
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: EdgeInsets.all(20),
-                  itemCount: _messages.length + (_isLoading ? 1 : 0),
-                  itemBuilder: (_, index) {
-                    if (index == _messages.length && _isLoading) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Row(
-                          children: [
-                            buildAvatar(false),
-                            SizedBox(width: 8),
-                            Container(
-                              padding: EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.1),
-                                  width: 1,
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xff0a0a0a),
+                  Color(0xff1a1a2e),
+                  Color(0xff16213E),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Header Section
+                  Container(
+                    padding: EdgeInsets.all(20),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Color(0xff667eea), Color(0xff764ba2)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Color(0xff667eea).withOpacity(0.1),
+                                blurRadius: 12,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.smart_toy_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "AI Assistant",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  buildDots(0, _animationController),
-                                  buildDots(1, _animationController),
-                                  buildDots(2, _animationController),
-                                ],
+                              Text(
+                                "Ask me anything ($displayModel)",
+                                style: TextStyle(
+                                  color: Colors.white60,
+                                  fontSize: 14,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      );
-                    }
-                    return buildMessageBubble(
-                      context: context,
-                      message: _messages[index],
-                    );
-                  },
-                ),
-              ),
+                        GestureDetector(
+                          onTap: () => bottomSheet(context),
+                          child: Container(
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.more_vert, color: Colors.white70),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
-              // Input field area
-              buildInputArea(
-                isLoading: _isLoading,
-                messageController: _messageController,
-                sendMessage: _sendMessage,
+                  // Messages area
+                  Expanded(
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: EdgeInsets.all(20),
+                      itemCount: _messages.length + (_isLoading ? 1 : 0),
+                      itemBuilder: (_, index) {
+                        if (index == _messages.length && _isLoading) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Row(
+                              children: [
+                                buildAvatar(false),
+                                SizedBox(width: 8),
+                                Container(
+                                  padding: EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.1),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      buildDots(0, _animationController),
+                                      buildDots(1, _animationController),
+                                      buildDots(2, _animationController),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        return buildMessageBubble(
+                          context: context,
+                          message: _messages[index],
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Input field area
+                  buildInputArea(
+                    isLoading: _isLoading,
+                    messageController: _messageController,
+                    sendMessage: () {
+                      _sendMessage(
+                        currentModel:
+                            aiModelProvider.aiModels[aiModelProvider
+                                .preferredModelIndex]['model'],
+                      );
+                    },
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
